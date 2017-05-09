@@ -11,11 +11,13 @@ import (
 )
 
 type (
+	// ConfigParamsDescriptor for the PluginDescriptor
 	ConfigParamsDescriptor struct {
 		Name    string      `json:"name"`
 		Type    string      `json:"type"`
 		Default interface{} `json:"default"`
 	}
+	// RequestParamsDescriptor for the PluginDescriptor
 	RequestParamsDescriptor struct {
 		Key         string `json:"key"`
 		Name        string `json:"name"`
@@ -46,7 +48,7 @@ type (
 		WaTTSUserID      string                 `json:"watts_userid"`
 	}
 
-	// Plugin holds the necessary data for the implementer (e.g. the config)
+	// PluginDescriptor describes a plugin to be executed by the wattsPluginLib
 	PluginDescriptor struct {
 		Author        string
 		Version       string
@@ -56,6 +58,7 @@ type (
 		RequestParams []RequestParamsDescriptor
 	}
 
+	// Plugin all necessary data for the request/revoke implementations
 	Plugin struct {
 		PluginInput PluginInput
 	}
