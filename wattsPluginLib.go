@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/kalaspuffar/base64url"
 	"github.com/indigo-dc/watts-plugin-tester/schemes"
+	"github.com/kalaspuffar/base64url"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 )
@@ -73,12 +73,13 @@ type (
 )
 
 var (
-	libVersion = "0.1.0"
-	app         = kingpin.New("wattsPlugin", "WaTTS plugin using wattsPluginLib (" + libVersion + ")")
+	libVersion  = "0.1.0"
+	app         = kingpin.New("wattsPlugin", "WaTTS plugin using wattsPluginLib ("+libVersion+")")
 	pluginInput = app.Arg("input (base64url encoded json)", "base64url encoded input").Required().String()
 )
 
-func check(err error, exitCode int, msg string) {
+// Check check an error and exit with exitCode if it fails
+func Check(err error, exitCode int, msg string) {
 	if err != nil {
 		var errorMsg string
 		if msg != "" {
@@ -86,7 +87,7 @@ func check(err error, exitCode int, msg string) {
 		} else {
 			errorMsg = fmt.Sprintf("%s", err)
 		}
-		Terminate(PluginError(errorMsg), 1)
+		Terminate(PluginError(errorMsg), exitCode)
 	}
 	return
 }
@@ -101,21 +102,21 @@ func printOutput(o Output) {
 	encoder.SetIndent(indentation, outputTabWidth)
 
 	err := encoder.Encode(o)
-	check(err, 1, "marshalIndent")
+	Check(err, 1, "marshalIndent")
 	fmt.Printf("%s", string(b.Bytes()))
 }
 
 func decodeInput(input string) (i PluginInput) {
 	bs, err := base64url.Decode(input)
-	check(err, 1, "decoding base64 string")
+	Check(err, 1, "decoding base64 string")
 
 	var testInterface interface{}
 	err = json.Unmarshal(bs, &testInterface)
-	check(err, 1, "unmarshaling input")
+	Check(err, 1, "unmarshaling input")
 	validate(testInterface)
 
 	err = json.Unmarshal(bs, &i)
-	check(err, 1, "unmarshaling input")
+	Check(err, 1, "unmarshaling input")
 	return i
 }
 
@@ -148,7 +149,7 @@ func executeAction(p Plugin, pd PluginDescriptor) (output Output) {
 
 func validate(pluginInput interface{}) {
 	path, err := schemes.PluginInputScheme.Validate(pluginInput)
-	check(err, 1, fmt.Sprintf("on validating plugin input at path %s", path))
+	Check(err, 1, fmt.Sprintf("on validating plugin input at path %s", path))
 	return
 }
 
