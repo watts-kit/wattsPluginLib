@@ -1,6 +1,7 @@
 package wattsPluginLib
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -11,12 +12,20 @@ import (
 )
 
 type (
+	// Credential to be created by request
+	Credential struct {
+		Name  string      `json:"name"`
+		Type  string      `json:"type"`
+		Value interface{} `json:"value"`
+	}
+
 	// ConfigParamsDescriptor for the PluginDescriptor
 	ConfigParamsDescriptor struct {
 		Name    string      `json:"name"`
 		Type    string      `json:"type"`
 		Default interface{} `json:"default"`
 	}
+
 	// RequestParamsDescriptor for the PluginDescriptor
 	RequestParamsDescriptor struct {
 		Key         string `json:"key"`
@@ -77,26 +86,23 @@ func check(err error, exitCode int, msg string) {
 		} else {
 			errorMsg = fmt.Sprintf("%s", err)
 		}
-		printErrorOutput(errorMsg)
-		app.Errorf(errorMsg)
-		os.Exit(exitCode)
+		Terminate(PluginError(errorMsg), 1)
 	}
 	return
 }
 
 func printOutput(o Output) {
-	//o["result"] = "ok"
-	bytes, _ := json.MarshalIndent(o, "", "    ")
-	fmt.Printf(string(bytes))
-}
+	b := new(bytes.Buffer)
 
-func printErrorOutput(logMsg string) {
-	printOutput(Output{
-		"result":   "error",
-		"user_msg": "Internal error, please contact the administrator",
-		"log_msg":  logMsg,
-	})
-	os.Exit(1)
+	indentation := ""
+	outputTabWidth := "    "
+	encoder := json.NewEncoder(b)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent(indentation, outputTabWidth)
+
+	err := encoder.Encode(o)
+	check(err, 1, "marshalIndent")
+	fmt.Printf("%s", string(b.Bytes()))
 }
 
 func decodeInput(input string) (i PluginInput) {
@@ -135,7 +141,7 @@ func executeAction(p Plugin, pd PluginDescriptor) (output Output) {
 	case "revoke":
 		output = pd.ActionRevoke(p)
 	default:
-		printErrorOutput(fmt.Sprintf("invalid plugin action '%s'", action))
+		Terminate(PluginError(fmt.Sprintf("invalid plugin action '%s'", action)), 1)
 	}
 	return
 }
@@ -164,6 +170,46 @@ func getPlugin(pd PluginDescriptor, input PluginInput) (p Plugin) {
 		(*p).PluginInput = input
 	*/
 	return
+}
+
+// PluginGoodRequest to be returned by request if the request yielded a credential
+func PluginGoodRequest(credential []Credential, credentialState string) Output {
+	return Output{
+		"result":     "ok",
+		"credential": credential,
+		"state":      credentialState,
+	}
+}
+
+// PluginAdditionalLogin to be returned by request if the an additional login is needed
+func PluginAdditionalLogin(providerId string, userMsg string) Output {
+	return Output{
+		"result":   "oidc_login",
+		"provider": providerId,
+		"msg":      userMsg,
+	}
+}
+
+// PluginGoodRevoke to be returned by revoke if the revoke succeeded
+func PluginGoodRevoke() Output {
+	return Output{
+		"result": "ok",
+	}
+}
+
+// PluginError call to indicate an error
+func PluginError(logMsg string) Output {
+	return Output{
+		"user_msg": "Internal error, please contact the administrator",
+		"log_msg":  logMsg,
+		"result":   "error",
+	}
+}
+
+// Terminate print the output and terminate the plugin
+func Terminate(o Output, exitCode int) {
+	printOutput(o)
+	os.Exit(exitCode)
 }
 
 // PluginRun is to be run by the implementing plugin
