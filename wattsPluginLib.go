@@ -73,9 +73,9 @@ type (
 )
 
 var (
-	libVersion  = "0.1.0"
+	libVersion  = "0.1.1"
 	app         = kingpin.New("wattsPlugin", "WaTTS plugin using wattsPluginLib ("+libVersion+")")
-	pluginInput = app.Arg("input (base64url encoded json)", "base64url encoded input").Required().String()
+	pluginInput = app.Arg("input (base64url encoded json)", "base64url encoded input").Required().Envar("WATTS_PARAMETER").String()
 )
 
 // Check check an error and exit with exitCode if it fails
@@ -98,7 +98,7 @@ func printOutput(o Output) {
 	indentation := ""
 	outputTabWidth := "    "
 	encoder := json.NewEncoder(b)
-	encoder.SetEscapeHTML(false)
+	encoder.SetEscapeHTML(true)
 	encoder.SetIndent(indentation, outputTabWidth)
 
 	err := encoder.Encode(o)
