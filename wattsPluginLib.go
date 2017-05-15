@@ -2,10 +2,9 @@ package wattsPluginLib
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	// "github.com/imdario/mergo"
+	"github.com/kalaspuffar/base64url"
 	"github.com/indigo-dc/watts-plugin-tester/schemes"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
@@ -75,7 +74,7 @@ type (
 
 var (
 	app         = kingpin.New("wattsPlugin", "WaTTS plugin using wattsPluginLib")
-	pluginInput = app.Arg("input", "base64 encoded input").Required().String()
+	pluginInput = app.Arg("input (base64url encoded json)", "base64url encoded input").Required().String()
 )
 
 func check(err error, exitCode int, msg string) {
@@ -106,7 +105,7 @@ func printOutput(o Output) {
 }
 
 func decodeInput(input string) (i PluginInput) {
-	bs, err := base64.RawStdEncoding.DecodeString(input)
+	bs, err := base64url.Decode(input)
 	check(err, 1, "decoding base64 string")
 
 	var testInterface interface{}
@@ -182,10 +181,10 @@ func PluginGoodRequest(credential []Credential, credentialState string) Output {
 }
 
 // PluginAdditionalLogin to be returned by request if the an additional login is needed
-func PluginAdditionalLogin(providerId string, userMsg string) Output {
+func PluginAdditionalLogin(providerID string, userMsg string) Output {
 	return Output{
 		"result":   "oidc_login",
-		"provider": providerId,
+		"provider": providerID,
 		"msg":      userMsg,
 	}
 }
