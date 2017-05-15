@@ -215,7 +215,9 @@ func Terminate(o Output, exitCode int) {
 
 // PluginRun is to be run by the implementing plugin
 func PluginRun(pluginDescriptor PluginDescriptor) {
-	app := kingpin.New(pluginDescriptor.Name, pluginDescriptor.Description+" ("+libVersion+")")
+	app := kingpin.New(
+		pluginDescriptor.Name,
+		pluginDescriptor.Description+" (plugin version: "+pluginDescriptor.Version+") (wattsPluginLib version: "+libVersion+")")
 	pluginInput := app.Arg("pluginInput (base64url encoded json)", "base64url encoded input").Required().Envar("WATTS_PARAMETER").String()
 	app.Author(pluginDescriptor.Author)
 	app.Version(pluginDescriptor.Version)
