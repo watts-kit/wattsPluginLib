@@ -73,7 +73,8 @@ type (
 )
 
 var (
-	app         = kingpin.New("wattsPlugin", "WaTTS plugin using wattsPluginLib")
+	libVersion = "0.1.0"
+	app         = kingpin.New("wattsPlugin", "WaTTS plugin using wattsPluginLib (" + libVersion + ")")
 	pluginInput = app.Arg("input (base64url encoded json)", "base64url encoded input").Required().String()
 )
 
