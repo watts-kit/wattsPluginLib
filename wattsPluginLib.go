@@ -87,21 +87,21 @@ func Check(err error, exitCode int, msg string) {
 		} else {
 			errorMsg = fmt.Sprintf("%s", err)
 		}
-		Terminate(PluginError(errorMsg), exitCode)
+		terminate(PluginError(errorMsg), exitCode)
 	}
 	return
 }
 
-func printOutput(o Output) {
+func printOutput(i interface{}) {
 	b := new(bytes.Buffer)
 
 	indentation := ""
 	outputTabWidth := "    "
 	encoder := json.NewEncoder(b)
-	encoder.SetEscapeHTML(true)
+	encoder.SetEscapeHTML(false)
 	encoder.SetIndent(indentation, outputTabWidth)
 
-	err := encoder.Encode(o)
+	err := encoder.Encode(i)
 	Check(err, 1, "marshalIndent")
 	fmt.Printf("%s", string(b.Bytes()))
 }
@@ -142,7 +142,7 @@ func executeAction(p Plugin, pd PluginDescriptor) (output Output) {
 	case "revoke":
 		output = pd.ActionRevoke(p)
 	default:
-		Terminate(PluginError(fmt.Sprintf("invalid plugin action '%s'", action)), 1)
+		terminate(PluginError(fmt.Sprintf("invalid plugin action '%s'", action)), 1)
 	}
 	return
 }
@@ -170,6 +170,19 @@ func getPlugin(pd PluginDescriptor, input PluginInput) (p Plugin) {
 		}
 		(*p).PluginInput = input
 	*/
+	return
+}
+
+// terminate print the output and terminate the plugin
+func terminate(o Output, exitCode int) {
+	printOutput(o)
+	os.Exit(exitCode)
+}
+
+// PluginDebug prints the interface and exits. *NOT* for production
+func PluginDebug(debugOutput interface{}) {
+	printOutput(debugOutput)
+	os.Exit(1)
 	return
 }
 
@@ -205,12 +218,6 @@ func PluginError(logMsg string) Output {
 		"log_msg":  logMsg,
 		"result":   "error",
 	}
-}
-
-// Terminate print the output and terminate the plugin
-func Terminate(o Output, exitCode int) {
-	printOutput(o)
-	os.Exit(exitCode)
 }
 
 // PluginRun is to be run by the implementing plugin
