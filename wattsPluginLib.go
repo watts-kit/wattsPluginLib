@@ -157,19 +157,7 @@ func getPlugin(pd PluginDescriptor, input PluginInput) (p Plugin) {
 	p = Plugin{
 		PluginInput: input,
 	}
-	/*
-		if cp := input["config_params"]; cp != nil {
-			configParams := cp.(map[string]interface{})
-			err := mergo.MergeWithOverwrite(&p.ConfigParams, configParams)
-			check(err, 1, "merging config params")
-		}
-		if rp := input["params"]; rp != nil {
-			requestParams := rp.(map[string]interface{})
-			err := mergo.MergeWithOverwrite(&p.RequestParams, requestParams)
-			check(err, 1, "merging request params")
-		}
-		(*p).PluginInput = input
-	*/
+	//TODO check if plugin descripton and input fit together
 	return
 }
 
