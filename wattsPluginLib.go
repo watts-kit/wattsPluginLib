@@ -62,8 +62,8 @@ type (
 		Version       string
 		Description   string
 		Name          string
-		ActionRequest (func(Plugin) Output)
-		ActionRevoke  (func(Plugin) Output)
+		ActionRequest (func(PluginInput, map[string]interface{}, map[string]interface{}) Output)
+		ActionRevoke (func(PluginInput, map[string]interface{}, map[string]interface{}) Output)
 		ConfigParams  []ConfigParamsDescriptor
 		RequestParams []RequestParamsDescriptor
 	}
@@ -75,7 +75,7 @@ type (
 )
 
 var (
-	libVersion = "0.1.1"
+	libVersion = "1.0.0"
 )
 
 // Check check an error and exit with exitCode if it fails
@@ -138,9 +138,9 @@ func executeAction(p Plugin, pd PluginDescriptor) (output Output) {
 	case "parameter":
 		output = actionParameter(pd)
 	case "request":
-		output = pd.ActionRequest(p)
+		output = pd.ActionRequest(p.PluginInput, p.PluginInput.ConfigParams, p.PluginInput.Params)
 	case "revoke":
-		output = pd.ActionRevoke(p)
+		output = pd.ActionRevoke(p.PluginInput, p.PluginInput.ConfigParams, p.PluginInput.Params)
 	default:
 		terminate(PluginError(fmt.Sprintf("invalid plugin action '%s'", action)), 1)
 	}
