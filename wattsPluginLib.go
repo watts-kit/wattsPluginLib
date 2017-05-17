@@ -110,6 +110,7 @@ func decodeInput(input string) (i PluginInput) {
 	bs, err := base64url.Decode(input)
 	Check(err, 1, "decoding base64 string")
 
+	// validate the input against a scheme
 	var testInterface interface{}
 	err = json.Unmarshal(bs, &testInterface)
 	Check(err, 1, "unmarshaling input")
