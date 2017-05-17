@@ -37,14 +37,16 @@ type (
 	// Output represents the plugins json output
 	Output map[string]interface{}
 
+	Action (func(Input, map[string]interface{}, map[string]interface{}) Output)
+
 	// AdditionalLogin type
 	AdditionalLogin struct {
 		UserInfo    map[string]string `json:"user_info"`
 		AccessToken string            `json:"access_token"`
 	}
 
-	// PluginInput type
-	PluginInput struct {
+	// Input type
+	Input struct {
 		WaTTSVersion     string                 `json:"watts_version"`
 		Action           string                 `json:"action"`
 		ConfigParams     map[string]interface{} `json:"conf_params"`
@@ -62,20 +64,14 @@ type (
 		Version       string
 		Description   string
 		Name          string
-		ActionRequest (func(PluginInput, map[string]interface{}, map[string]interface{}) Output)
-		ActionRevoke  (func(PluginInput, map[string]interface{}, map[string]interface{}) Output)
+		Actions       map[string]Action
 		ConfigParams  []ConfigParamsDescriptor
 		RequestParams []RequestParamsDescriptor
-	}
-
-	// Plugin all necessary data for the request/revoke implementations
-	Plugin struct {
-		PluginInput PluginInput
 	}
 )
 
 const (
-	libVersion = "1.2.0"
+	libVersion = "2.0.0"
 )
 
 // Check check an error and exit with exitCode if it fails
@@ -106,7 +102,7 @@ func printOutput(i interface{}) {
 	fmt.Printf("%s", string(b.Bytes()))
 }
 
-func decodeInput(input string) (i PluginInput) {
+func decodeInput(input string) (i Input) {
 	bs, err := base64url.Decode(input)
 	Check(err, 1, "decoding base64 string")
 
@@ -133,17 +129,11 @@ func actionParameter(pd PluginDescriptor) Output {
 	}
 }
 
-func executeAction(p Plugin, pd PluginDescriptor) (output Output) {
-	action := p.PluginInput.Action
-	switch action {
-	case "parameter":
-		output = actionParameter(pd)
-	case "request":
-		output = pd.ActionRequest(p.PluginInput, p.PluginInput.ConfigParams, p.PluginInput.Params)
-	case "revoke":
-		output = pd.ActionRevoke(p.PluginInput, p.PluginInput.ConfigParams, p.PluginInput.Params)
-	default:
-		terminate(PluginError(fmt.Sprintf("invalid plugin action '%s'", action)), 1)
+func executeAction(input Input, pd PluginDescriptor) (output Output) {
+	if action, ok := pd.Actions[input.Action]; ok {
+		output = action(input, input.ConfigParams, input.Params)
+	} else {
+		PluginError(fmt.Sprintf("invalid plugin action '%s'", action))
 	}
 	return
 }
@@ -154,7 +144,7 @@ func validate(pluginInput interface{}) {
 	return
 }
 
-func getPlugin(pd PluginDescriptor, input PluginInput) Plugin {
+func validatePluginInput(input Input, pd PluginDescriptor) {
 
 	// check all config parameters for existence and correct type
 	for _, cpd := range pd.ConfigParams {
@@ -169,7 +159,7 @@ func getPlugin(pd PluginDescriptor, input PluginInput) Plugin {
 			case bool:
 				actualType = "bool"
 			default:
-				PluginError(fmt.Sprintf("config parameter %s needs to be of type %s (is %s)", 
+				PluginError(fmt.Sprintf("config parameter %s needs to be of type %s (is %s)",
 					cpd.Name, cpd.Type, paramType))
 			}
 
@@ -208,8 +198,6 @@ func getPlugin(pd PluginDescriptor, input PluginInput) Plugin {
 			}
 		}
 	}
-
-	return Plugin{PluginInput: input}
 }
 
 // terminate print the output and terminate the plugin
@@ -275,8 +263,10 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 	input := decodeInput(*pluginInput)
 
-	// generate plugin
-	plugin := getPlugin(pluginDescriptor, input)
-	output := executeAction(plugin, pluginDescriptor)
+	// validate the input against the descriptor
+	validatePluginInput(input, pluginDescriptor)
+	
+	// execute the plugin action
+	output := executeAction(input, pluginDescriptor)
 	printOutput(output)
 }
