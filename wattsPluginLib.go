@@ -202,7 +202,10 @@ func getPlugin(pd PluginDescriptor, input PluginInput) Plugin {
 				PluginError(fmt.Sprintf("request parameter %s needs to be of type %s", rpd.Key, rpd.Type))
 			}
 		} else {
-			PluginError(fmt.Sprintf("request parameter %s needs to be provided", rpd.Key))
+			// only fail if the request parametr is mandatory
+			if rpd.Mandatory {
+				PluginError(fmt.Sprintf("request parameter %s needs to be provided", rpd.Key))
+			}
 		}
 	}
 
