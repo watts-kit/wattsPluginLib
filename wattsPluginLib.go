@@ -63,7 +63,7 @@ type (
 		Description   string
 		Name          string
 		ActionRequest (func(PluginInput, map[string]interface{}, map[string]interface{}) Output)
-		ActionRevoke (func(PluginInput, map[string]interface{}, map[string]interface{}) Output)
+		ActionRevoke  (func(PluginInput, map[string]interface{}, map[string]interface{}) Output)
 		ConfigParams  []ConfigParamsDescriptor
 		RequestParams []RequestParamsDescriptor
 	}
@@ -75,7 +75,7 @@ type (
 )
 
 var (
-	libVersion = "1.0.0"
+	libVersion = "1.1.0"
 )
 
 // Check check an error and exit with exitCode if it fails
@@ -153,12 +153,59 @@ func validate(pluginInput interface{}) {
 	return
 }
 
-func getPlugin(pd PluginDescriptor, input PluginInput) (p Plugin) {
-	p = Plugin{
-		PluginInput: input,
+func getPlugin(pd PluginDescriptor, input PluginInput) Plugin {
+
+	// check all config parameters for existence and correct type
+	for _, cpd := range pd.ConfigParams {
+		if paramValue, ok := input.ConfigParams[cpd.Name]; ok {
+			expectedType := cpd.Type
+			actualType := ""
+
+			// TODO support more types
+			switch paramType := paramValue.(type) {
+			case string:
+				actualType = "string"
+			case bool:
+				actualType = "bool"
+			default:
+				PluginError(fmt.Sprintf("config parameter %s needs to be of type %s (is %s)", 
+					cpd.Name, cpd.Type, paramType))
+			}
+
+			if expectedType != actualType {
+				PluginError(fmt.Sprintf("config parameter %s needs to be of type %s", cpd.Name, cpd.Type))
+			}
+		} else {
+			PluginError(fmt.Sprintf("config parameter %s needs to be provided", cpd.Name))
+		}
 	}
-	//TODO check if plugin descripton and input fit together
-	return
+
+	// check all request parameters for existence and correct type
+	for _, rpd := range pd.RequestParams {
+		if paramValue, ok := input.Params[rpd.Key]; ok {
+			expectedType := rpd.Type
+			actualType := ""
+
+			// TODO support more types
+			switch paramType := paramValue.(type) {
+			case string:
+				actualType = "string"
+			case bool:
+				actualType = "bool"
+			default:
+				PluginError(fmt.Sprintf("request parameter %s needs to be of type %s (is %s)",
+					rpd.Name, rpd.Type, paramType))
+			}
+
+			if expectedType != actualType {
+				PluginError(fmt.Sprintf("request parameter %s needs to be of type %s", rpd.Key, rpd.Type))
+			}
+		} else {
+			PluginError(fmt.Sprintf("request parameter %s needs to be provided", rpd.Key))
+		}
+	}
+
+	return Plugin{PluginInput: input}
 }
 
 // terminate print the output and terminate the plugin
