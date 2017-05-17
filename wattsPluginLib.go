@@ -75,7 +75,7 @@ type (
 )
 
 const (
-	libVersion = "1.1.0"
+	libVersion = "1.2.0"
 )
 
 // Check check an error and exit with exitCode if it fails
@@ -248,12 +248,15 @@ func PluginGoodRevoke() Output {
 }
 
 // PluginError call to indicate an error
-func PluginError(logMsg string) Output {
-	return Output{
+func PluginError(logMsg string) (o Output) {
+	o = Output{
 		"user_msg": "Internal error, please contact the administrator",
 		"log_msg":  logMsg,
 		"result":   "error",
 	}
+
+	terminate(o, 1)
+	return
 }
 
 // PluginRun is to be run by the implementing plugin
