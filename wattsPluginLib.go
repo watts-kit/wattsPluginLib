@@ -37,6 +37,7 @@ type (
 	// Output represents the plugins json output
 	Output map[string]interface{}
 
+	// Action is the type of a method implemented by the plugin to execute an action
 	Action (func(Input) Output)
 
 	// AdditionalLogin type
@@ -133,7 +134,7 @@ func executeAction(input Input, pd PluginDescriptor) (output Output) {
 	if action, ok := pd.Actions[input.Action]; ok {
 		output = action(input)
 	} else {
-		PluginError(fmt.Sprintf("invalid plugin action '%s'", action))
+		PluginError(fmt.Sprintf("invalid / not implemented plugin action '%s'", input.Action))
 	}
 	return
 }
