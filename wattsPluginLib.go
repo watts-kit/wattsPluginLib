@@ -37,7 +37,7 @@ type (
 	// Output represents the plugins json output
 	Output map[string]interface{}
 
-	Action (func(Input, map[string]interface{}, map[string]interface{}) Output)
+	Action (func(Input) Output)
 
 	// AdditionalLogin type
 	AdditionalLogin struct {
@@ -49,7 +49,7 @@ type (
 	Input struct {
 		WaTTSVersion     string                 `json:"watts_version"`
 		Action           string                 `json:"action"`
-		ConfigParams     map[string]interface{} `json:"conf_params"`
+		Conf     map[string]interface{} `json:"conf_params"`
 		Params           map[string]interface{} `json:"params"`
 		CredentialState  string                 `json:"cred_state"`
 		AccessToken      string                 `json:"access_token"`
@@ -131,7 +131,7 @@ func actionParameter(pd PluginDescriptor) Output {
 
 func executeAction(input Input, pd PluginDescriptor) (output Output) {
 	if action, ok := pd.Actions[input.Action]; ok {
-		output = action(input, input.ConfigParams, input.Params)
+		output = action(input)
 	} else {
 		PluginError(fmt.Sprintf("invalid plugin action '%s'", action))
 	}
@@ -148,7 +148,7 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 
 	// check all config parameters for existence and correct type
 	for _, cpd := range pd.ConfigParams {
-		if paramValue, ok := input.ConfigParams[cpd.Name]; ok {
+		if paramValue, ok := input.Conf[cpd.Name]; ok {
 			expectedType := cpd.Type
 			actualType := ""
 
