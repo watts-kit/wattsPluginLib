@@ -72,7 +72,7 @@ type (
 )
 
 const (
-	libVersion = "2.1.0"
+	libVersion = "2.1.1"
 )
 
 // Check check an error and exit with exitCode if it fails
@@ -155,15 +155,21 @@ func initializePlugin(input Input, pd PluginDescriptor) {
 }
 
 func executeAction(input Input, pd PluginDescriptor) (output Output) {
-	// initialize the plugin if action is a request and the plugin is not jet initialized
-	if input.Action == "request" {
-		initializePlugin(input, pd)
-	}
+	switch action := input.Action; action {
+	case "parameter":
+		// we do the parameter action ourself
+		actionParameter(pd)
 
-	if action, ok := pd.Actions[input.Action]; ok {
-		output = action(input)
-	} else {
-		PluginError(fmt.Sprintf("invalid / not implemented plugin action '%s'", input.Action))
+	case "request":
+		// initialize plugins before all requests
+		initializePlugin(input, pd)
+
+	default:
+		if actionImplementation, ok := pd.Actions[action]; ok {
+			output = actionImplementation(input)
+		} else {
+			PluginError(fmt.Sprintf("invalid / not implemented plugin action '%s'", action))
+		}
 	}
 	return
 }
