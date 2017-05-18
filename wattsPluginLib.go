@@ -72,7 +72,7 @@ type (
 )
 
 const (
-	libVersion = "2.0.0"
+	libVersion = "2.1.0"
 )
 
 // Check check an error and exit with exitCode if it fails
