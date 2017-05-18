@@ -50,7 +50,7 @@ type (
 	Input struct {
 		WaTTSVersion     string                 `json:"watts_version"`
 		Action           string                 `json:"action"`
-		Conf     map[string]interface{} `json:"conf_params"`
+		Conf             map[string]interface{} `json:"conf_params"`
 		Params           map[string]interface{} `json:"params"`
 		CredentialState  string                 `json:"cred_state"`
 		AccessToken      string                 `json:"access_token"`
@@ -130,7 +130,36 @@ func actionParameter(pd PluginDescriptor) Output {
 	}
 }
 
+func initializePlugin(input Input, pd PluginDescriptor) {
+	var output Output
+	// test if plugin is already initialized (via a provided action "isInitialized")
+	// isInitialized has to return the an Output with "isInitialized": true if the plugin is already
+	// initialized
+	if action, ok := pd.Actions["isInitialized"]; ok {
+		output = action(input)
+		if isInitialized, ok := output["isInitialized"].(bool); ok && isInitialized {
+			return
+		}
+	}
+
+	// initialize the plugin if it has provided an initialize action
+	// isInitialized has to return the an Output with "restult": "ok" if the initialization was
+	// successful
+	if action, ok := pd.Actions["initialize"]; ok {
+		output = action(input)
+		if result, ok := output["result"].(string); ok && result == "ok" {
+			return
+		}
+		terminate(output, 1)
+	}
+}
+
 func executeAction(input Input, pd PluginDescriptor) (output Output) {
+	// initialize the plugin if action is a request and the plugin is not jet initialized
+	if input.Action == "request" {
+		initializePlugin(input, pd)
+	}
+
 	if action, ok := pd.Actions[input.Action]; ok {
 		output = action(input)
 	} else {
@@ -223,7 +252,7 @@ func PluginGoodRequest(credential []Credential, credentialState string) Output {
 	}
 }
 
-// PluginAdditionalLogin to be returned by request if the an additional login is needed
+// PluginAdditionalLogin to be returned by request if an additional login is needed
 func PluginAdditionalLogin(providerID string, userMsg string) Output {
 	return Output{
 		"result":   "oidc_login",
@@ -266,7 +295,7 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 
 	// validate the input against the descriptor
 	validatePluginInput(input, pluginDescriptor)
-	
+
 	// execute the plugin action
 	output := executeAction(input, pluginDescriptor)
 	printOutput(output)
