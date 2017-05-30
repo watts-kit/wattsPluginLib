@@ -155,21 +155,22 @@ func initializePlugin(input Input, pd PluginDescriptor) {
 }
 
 func executeAction(input Input, pd PluginDescriptor) (output Output) {
-	switch action := input.Action; action {
+	action := input.Action
+	switch action {
 	case "parameter":
 		// we do the parameter action ourself
-		actionParameter(pd)
+		output = actionParameter(pd)
+		return
 
 	case "request":
 		// initialize plugins before all requests
 		initializePlugin(input, pd)
+	}
 
-	default:
-		if actionImplementation, ok := pd.Actions[action]; ok {
-			output = actionImplementation(input)
-		} else {
-			PluginError(fmt.Sprintf("invalid / not implemented plugin action '%s'", action))
-		}
+	if actionImplementation, ok := pd.Actions[action]; ok {
+		output = actionImplementation(input)
+	} else {
+		PluginError(fmt.Sprintf("invalid / not implemented plugin action '%s'", action))
 	}
 	return
 }
