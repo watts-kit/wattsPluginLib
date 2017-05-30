@@ -54,7 +54,7 @@ type (
 		Params           map[string]interface{} `json:"params"`
 		CredentialState  string                 `json:"cred_state"`
 		AccessToken      string                 `json:"access_token"`
-		UserInfo         map[string]string      `json:"user_info"`
+		UserInfo         map[string]interface{} `json:"user_info"`
 		AdditionalLogins []AdditionalLogin      `json:"additional_logins"`
 		WaTTSUserID      string                 `json:"watts_userid"`
 	}
