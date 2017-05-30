@@ -72,7 +72,7 @@ type (
 )
 
 const (
-	libVersion = "2.1.1"
+	libVersion = "2.1.2"
 )
 
 // Check check an error and exit with exitCode if it fails
@@ -166,6 +166,9 @@ func executeAction(input Input, pd PluginDescriptor) (output Output) {
 		// initialize plugins before all requests
 		initializePlugin(input, pd)
 	}
+
+	// validate the input against the descriptor (if the action was not parameter)
+	validatePluginInput(input, pd)
 
 	if actionImplementation, ok := pd.Actions[action]; ok {
 		output = actionImplementation(input)
@@ -300,10 +303,7 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 	input := decodeInput(*pluginInput)
 
-	// validate the input against the descriptor
-	validatePluginInput(input, pluginDescriptor)
-
-	// execute the plugin action
+	// execute the plugin action (validation eventually takes also place)
 	output := executeAction(input, pluginDescriptor)
 	printOutput(output)
 }
