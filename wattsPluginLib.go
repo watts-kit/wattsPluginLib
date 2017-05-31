@@ -1,6 +1,7 @@
 package wattsPluginLib
 
 import (
+	"io/ioutil"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -69,6 +70,10 @@ type (
 
 const (
 	libVersion = "3.0.0"
+
+	// write out to files
+	// this should be false
+	debug = true
 )
 
 // TextCredential returns a text credential with valid type
@@ -117,7 +122,14 @@ func printOutput(i interface{}) {
 
 	err := encoder.Encode(i)
 	Check(err, 1, "marshalIndent")
-	fmt.Printf("%s", string(b.Bytes()))
+	outputBytes := b.Bytes()
+	fmt.Printf("%s", string(outputBytes))
+
+	if debug {
+		logFile := "/tmp/wattsPluginLib-debug"
+		err = ioutil.WriteFile(logFile, outputBytes, 0700)
+		Check(err, 1, "unable to write log file")
+	}
 }
 
 func decodeInput(input string) (i Input) {
