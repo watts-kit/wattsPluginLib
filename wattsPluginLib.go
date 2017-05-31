@@ -85,6 +85,7 @@ func TextCredential(name string, value string) Credential {
 	}
 }
 
+// TODO determine rows and cols so they dont have to be provided
 // TextFileCredential returns a textfile credential with valid type
 func TextFileCredential(name string, value string, rows int, cols int, saveAs string) Credential {
 	return Credential{
@@ -136,14 +137,19 @@ func decodeInput(input string) (i Input) {
 	bs, err := base64url.Decode(input)
 	Check(err, 1, "decoding base64 string")
 
+
+	err = json.Unmarshal(bs, &i)
+	Check(err, 1, "unmarshaling input")
+
+	// we don't validate the input if
+	if i.Action != "parameter" {
 	// validate the input against a scheme
 	var testInterface interface{}
 	err = json.Unmarshal(bs, &testInterface)
 	Check(err, 1, "unmarshaling input")
 	validate(testInterface)
+	}
 
-	err = json.Unmarshal(bs, &i)
-	Check(err, 1, "unmarshaling input")
 	return i
 }
 
