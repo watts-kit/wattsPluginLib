@@ -137,18 +137,28 @@ func decodeInput(input string) (i Input) {
 	bs, err := base64url.Decode(input)
 	Check(err, 1, "decoding base64 string")
 
+		// validate the input against a scheme
+		var testInterface interface{}
+		err = json.Unmarshal(bs, &testInterface)
+	Check(err, 1, "unmarshaling input into test interface")
+		validate(testInterface)
+
+
+	// ---
+	// TODO remove this part
+	// dirty bug circumvention
+	var testMap map[string]interface{}
+	err = json.Unmarshal(bs, &testMap)
+	Check(err, 1, "unmarshaling input into map")
+
+	if testMap["action"].(string) == "revoke" {
+		delete(testMap, "params")
+	}
+	bs, err = json.Marshal(testMap)
+	// ---
 
 	err = json.Unmarshal(bs, &i)
-	Check(err, 1, "unmarshaling input")
-
-	// we don't validate the input if
-	if i.Action != "parameter" {
-	// validate the input against a scheme
-	var testInterface interface{}
-	err = json.Unmarshal(bs, &testInterface)
-	Check(err, 1, "unmarshaling input")
-	validate(testInterface)
-	}
+	Check(err, 1, "unmarshaling input into Input struct")
 
 	return i
 }
@@ -220,7 +230,7 @@ func executeAction(input Input, pd PluginDescriptor) (output Output) {
 
 func validate(pluginInput interface{}) {
 	path, err := schemes.PluginInputScheme.Validate(pluginInput)
-	Check(err, 1, fmt.Sprintf("on validating plugin input at path %s", path))
+	Check(err, 1, fmt.Sprintf("on validating plugin input at path %s \n%s", path, pluginInput))
 	return
 }
 
