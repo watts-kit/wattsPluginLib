@@ -12,11 +12,7 @@ import (
 
 type (
 	// Credential to be created by request
-	Credential struct {
-		Name  string      `json:"name"`
-		Type  string      `json:"type"`
-		Value interface{} `json:"value"`
-	}
+	Credential map[string]interface{}
 
 	// ConfigParamsDescriptor for the PluginDescriptor
 	ConfigParamsDescriptor struct {
@@ -72,8 +68,29 @@ type (
 )
 
 const (
-	libVersion = "2.1.2"
+	libVersion = "3.0.0"
 )
+
+// TextCredential returns a text credential with valid type
+func TextCredential(name string, value string) Credential {
+	return Credential{
+		"type": "text",
+		"name": name,
+		"value": value,
+	}
+}
+
+// TextFileCredential returns a textfile credential with valid type
+func TextFileCredential(name string, value string, rows int, cols int, saveAs string) Credential {
+	return Credential{
+		"type": "textfile",
+		"name": name,
+		"save_as": saveAs,
+		"value": value,
+		"rows": rows,
+		"cols": cols,
+	}
+}
 
 // Check check an error and exit with exitCode if it fails
 func Check(err error, exitCode int, msg string) {
