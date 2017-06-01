@@ -1,6 +1,7 @@
 package wattsPluginLib
 
 import (
+	"strings"
 	"io/ioutil"
 	"bytes"
 	"encoding/json"
@@ -94,6 +95,27 @@ func TextFileCredential(name string, value string, rows int, cols int, saveAs st
 		"value": value,
 		"rows": rows,
 		"cols": cols,
+	}
+}
+
+// TextFileCredentialAuto returns a textfile credential with valid type and set width and
+// height to sane values
+func TextFileCredentialAuto(name string, value string, saveAs string) Credential {
+	maxWidth := 0
+	lines := strings.Split(value, "\n")
+	for _, line := range lines {
+		l := len(line)
+		if l > maxWidth {
+			maxWidth = l
+		}
+	}
+	return Credential{
+		"type": "textfile",
+		"name": name,
+		"save_as": saveAs,
+		"value": value,
+		"rows": len(lines),
+		"cols": maxWidth,
 	}
 }
 
