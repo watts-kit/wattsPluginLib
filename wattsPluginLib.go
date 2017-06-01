@@ -192,7 +192,12 @@ func executeAction(input Input, pd PluginDescriptor) (output Output) {
 		return
 
 	case "request":
-		// initialize plugins before all requests
+		// initialize plugins before request
+		initializePlugin(input, pd)
+
+	case "revoke":
+		// initialize plugins before revoke
+		// this is needed if the state vanishes while a credential is still tracked by watts
 		initializePlugin(input, pd)
 	}
 
