@@ -1,15 +1,15 @@
 package wattsPluginLib
 
 import (
-	"strings"
-	"io/ioutil"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/indigo-dc/watts-plugin-tester/schemes"
 	"github.com/kalaspuffar/base64url"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"io/ioutil"
 	"os"
+	"strings"
 )
 
 type (
@@ -74,64 +74,8 @@ const (
 
 	// write out to files
 	// this should be false
-	debug = true
+	debug = false
 )
-
-// TextCredential returns a text credential with valid type
-func TextCredential(name string, value string) Credential {
-	return Credential{
-		"type": "text",
-		"name": name,
-		"value": value,
-	}
-}
-
-// TextFileCredential returns a textfile credential with valid type
-func TextFileCredential(name string, value string, rows int, cols int, saveAs string) Credential {
-	return Credential{
-		"type": "textfile",
-		"name": name,
-		"save_as": saveAs,
-		"value": value,
-		"rows": rows,
-		"cols": cols,
-	}
-}
-
-// TextFileCredentialAuto returns a textfile credential with valid type and set width and
-// height to sane values
-func TextFileCredentialAuto(name string, value string, saveAs string) Credential {
-	maxWidth := 0
-	lines := strings.Split(value, "\n")
-	for _, line := range lines {
-		l := len(line)
-		if l > maxWidth {
-			maxWidth = l
-		}
-	}
-	return Credential{
-		"type": "textfile",
-		"name": name,
-		"save_as": saveAs,
-		"value": value,
-		"rows": len(lines),
-		"cols": maxWidth,
-	}
-}
-
-// Check check an error and exit with exitCode if it fails
-func Check(err error, exitCode int, msg string) {
-	if err != nil {
-		var errorMsg string
-		if msg != "" {
-			errorMsg = fmt.Sprintf("%s - %s", err, msg)
-		} else {
-			errorMsg = fmt.Sprintf("%s", err)
-		}
-		terminate(PluginError(errorMsg), exitCode)
-	}
-	return
-}
 
 func printOutput(i interface{}) {
 	b := new(bytes.Buffer)
@@ -270,7 +214,14 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 	// check all request parameters for existence and correct type
 	for _, rpd := range pd.RequestParams {
 		if paramValue, ok := input.Params[rpd.Key]; ok {
-			expectedType := rpd.Type
+			var expectedType string
+			// TODO does this catch all problems?
+			switch rpd.Type {
+			case "textarea":
+				expectedType = "string"
+			default:
+				expectedType = rpd.Type
+			}
 			actualType := ""
 
 			// TODO support more types
@@ -294,6 +245,64 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 			}
 		}
 	}
+}
+
+// exported functions ---
+
+// TextCredential returns a text credential with valid type
+func TextCredential(name string, value string) Credential {
+	return Credential{
+		"type":  "text",
+		"name":  name,
+		"value": value,
+	}
+}
+
+// TextFileCredential returns a textfile credential with valid type
+func TextFileCredential(name string, value string, rows int, cols int, saveAs string) Credential {
+	return Credential{
+		"type":    "textfile",
+		"name":    name,
+		"save_as": saveAs,
+		"value":   value,
+		"rows":    rows,
+		"cols":    cols,
+	}
+}
+
+// TextFileCredentialAuto returns a textfile credential with valid type and set width and
+// height to sane values
+func TextFileCredentialAuto(name string, value string, saveAs string) Credential {
+	maxWidth := 0
+	lines := strings.Split(value, "\n")
+	for _, line := range lines {
+		l := len(line)
+		if l > maxWidth {
+			maxWidth = l
+		}
+	}
+	return Credential{
+		"type":    "textfile",
+		"name":    name,
+		"save_as": saveAs,
+		"value":   value,
+		"rows":    len(lines),
+		"cols":    maxWidth,
+	}
+}
+
+// Check check an error and exit with exitCode if it fails
+func Check(err error, exitCode int, msg string) {
+	if err != nil {
+		var errorMsg string
+		if msg != "" {
+			errorMsg = fmt.Sprintf("%s - %s", err, msg)
+		} else {
+			errorMsg = fmt.Sprintf("%s", err)
+		}
+		terminate(PluginError(errorMsg), exitCode)
+	}
+	return
 }
 
 // terminate print the output and terminate the plugin
