@@ -247,6 +247,11 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 	}
 }
 
+func terminate(o Output, exitCode int) {
+	printOutput(o)
+	os.Exit(exitCode)
+}
+
 // exported functions ---
 
 // TextCredential returns a text credential with valid type
@@ -303,12 +308,6 @@ func Check(err error, exitCode int, msg string) {
 		terminate(PluginError(errorMsg), exitCode)
 	}
 	return
-}
-
-// terminate print the output and terminate the plugin
-func terminate(o Output, exitCode int) {
-	printOutput(o)
-	os.Exit(exitCode)
 }
 
 // PluginDebug prints the interface and exits. *NOT* for production
