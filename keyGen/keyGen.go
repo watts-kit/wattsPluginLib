@@ -1,4 +1,4 @@
-package sshKeyGen
+package keyGen
 
 import (
 	"crypto/rand"
@@ -87,7 +87,7 @@ func GenerateSSHKey(rsaBits int, rsaPasswordLength int) (sshKeypair SSHKeypair) 
 
 	var privateKeyPEM *pem.Block
 	if rsaPasswordLength > 0 {
-		sshKeypair.Password = keygen.NewPass(rsaPasswordLength)
+		sshKeypair.Password = GeneratePassword(rsaPasswordLength)
 		privateKeyPEM = MarshalRSAKeyEncryptedPEM(privateKey, sshKeypair.Password)
 	} else {
 		privateKeyPEM = MarshalRSAKeyPEM(privateKey)
@@ -99,4 +99,10 @@ func GenerateSSHKey(rsaBits int, rsaPasswordLength int) (sshKeypair SSHKeypair) 
 	sshKeypair.PrivateKey = string(pem.EncodeToMemory(privateKeyPEM))
 	sshKeypair.PublicKey = string(ssh.MarshalAuthorizedKey(sshPublicKey))
 	return
+}
+
+// GeneratePassword generate a password with given length
+func GeneratePassword(length int) (password string) {
+		password = keygen.NewPass(length)
+		return
 }
