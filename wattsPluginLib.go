@@ -7,16 +7,14 @@ import (
 	"github.com/indigo-dc/watts-plugin-tester/schemes"
 	"github.com/kalaspuffar/base64url"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"io/ioutil"
 	"os"
+	"strings"
 )
 
 type (
 	// Credential to be created by request
-	Credential struct {
-		Name  string      `json:"name"`
-		Type  string      `json:"type"`
-		Value interface{} `json:"value"`
-	}
+	Credential map[string]interface{}
 
 	// ConfigParamsDescriptor for the PluginDescriptor
 	ConfigParamsDescriptor struct {
@@ -50,11 +48,11 @@ type (
 	Input struct {
 		WaTTSVersion     string                 `json:"watts_version"`
 		Action           string                 `json:"action"`
-		Conf     map[string]interface{} `json:"conf_params"`
+		Conf             map[string]interface{} `json:"conf_params"`
 		Params           map[string]interface{} `json:"params"`
 		CredentialState  string                 `json:"cred_state"`
 		AccessToken      string                 `json:"access_token"`
-		UserInfo         map[string]string      `json:"user_info"`
+		UserInfo         map[string]interface{} `json:"user_info"`
 		AdditionalLogins []AdditionalLogin      `json:"additional_logins"`
 		WaTTSUserID      string                 `json:"watts_userid"`
 	}
@@ -72,22 +70,12 @@ type (
 )
 
 const (
-	libVersion = "2.0.0"
-)
+	libVersion = "3.0.0"
 
-// Check check an error and exit with exitCode if it fails
-func Check(err error, exitCode int, msg string) {
-	if err != nil {
-		var errorMsg string
-		if msg != "" {
-			errorMsg = fmt.Sprintf("%s - %s", err, msg)
-		} else {
-			errorMsg = fmt.Sprintf("%s", err)
-		}
-		terminate(PluginError(errorMsg), exitCode)
-	}
-	return
-}
+	// write out to files
+	// this should be false
+	debug = false
+)
 
 func printOutput(i interface{}) {
 	b := new(bytes.Buffer)
@@ -100,7 +88,14 @@ func printOutput(i interface{}) {
 
 	err := encoder.Encode(i)
 	Check(err, 1, "marshalIndent")
-	fmt.Printf("%s", string(b.Bytes()))
+	outputBytes := b.Bytes()
+	fmt.Printf("%s", string(outputBytes))
+
+	if debug {
+		logFile := "/tmp/wattsPluginLib-debug"
+		err = ioutil.WriteFile(logFile, outputBytes, 0700)
+		Check(err, 1, "unable to write log file")
+	}
 }
 
 func decodeInput(input string) (i Input) {
@@ -111,10 +106,13 @@ func decodeInput(input string) (i Input) {
 	var testInterface interface{}
 	err = json.Unmarshal(bs, &testInterface)
 	Check(err, 1, "unmarshaling input")
-	validate(testInterface)
+	validate_minimal(testInterface)
 
 	err = json.Unmarshal(bs, &i)
 	Check(err, 1, "unmarshaling input")
+	if i.Action != "parameter" {
+		validate(testInterface)
+	}
 	return i
 }
 
@@ -130,11 +128,55 @@ func actionParameter(pd PluginDescriptor) Output {
 	}
 }
 
-func executeAction(input Input, pd PluginDescriptor) (output Output) {
-	if action, ok := pd.Actions[input.Action]; ok {
+func initializePlugin(input Input, pd PluginDescriptor) {
+	var output Output
+	// test if plugin is already initialized (via a provided action "isInitialized")
+	// isInitialized has to return the an Output with "isInitialized": true if the plugin is already
+	// initialized
+	if action, ok := pd.Actions["isInitialized"]; ok {
 		output = action(input)
+		if isInitialized, ok := output["isInitialized"].(bool); ok && isInitialized {
+			return
+		}
+	}
+
+	// initialize the plugin if it has provided an initialize action
+	// isInitialized has to return the an Output with "restult": "ok" if the initialization was
+	// successful
+	if action, ok := pd.Actions["initialize"]; ok {
+		output = action(input)
+		if result, ok := output["result"].(string); ok && result == "ok" {
+			return
+		}
+		terminate(output, 1)
+	}
+}
+
+func executeAction(input Input, pd PluginDescriptor) (output Output) {
+	action := input.Action
+	switch action {
+	case "parameter":
+		// we do the parameter action ourself
+		output = actionParameter(pd)
+		return
+
+	case "request":
+		// initialize plugins before request
+		initializePlugin(input, pd)
+
+	case "revoke":
+		// initialize plugins before revoke
+		// this is needed if the state vanishes while a credential is still tracked by watts
+		initializePlugin(input, pd)
+	}
+
+	// validate the input against the descriptor (if the action was not parameter)
+	validatePluginInput(input, pd)
+
+	if actionImplementation, ok := pd.Actions[action]; ok {
+		output = actionImplementation(input)
 	} else {
-		PluginError(fmt.Sprintf("invalid / not implemented plugin action '%s'", input.Action))
+		PluginError(fmt.Sprintf("invalid / not implemented plugin action '%s'", action))
 	}
 	return
 }
@@ -142,6 +184,12 @@ func executeAction(input Input, pd PluginDescriptor) (output Output) {
 func validate(pluginInput interface{}) {
 	path, err := schemes.PluginInputScheme.Validate(pluginInput)
 	Check(err, 1, fmt.Sprintf("on validating plugin input at path %s", path))
+	return
+}
+
+func validate_minimal(pluginInput interface{}) {
+	path, err := schemes.PluginInputMinimalScheme.Validate(pluginInput)
+	Check(err, 1, fmt.Sprintf("on validating minimal plugin input at path %s", path))
 	return
 }
 
@@ -175,7 +223,14 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 	// check all request parameters for existence and correct type
 	for _, rpd := range pd.RequestParams {
 		if paramValue, ok := input.Params[rpd.Key]; ok {
-			expectedType := rpd.Type
+			var expectedType string
+			// TODO does this catch all problems?
+			switch rpd.Type {
+			case "textarea":
+				expectedType = "string"
+			default:
+				expectedType = rpd.Type
+			}
 			actualType := ""
 
 			// TODO support more types
@@ -201,6 +256,64 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 	}
 }
 
+// exported functions ---
+
+// TextCredential returns a text credential with valid type
+func TextCredential(name string, value string) Credential {
+	return Credential{
+		"type":  "text",
+		"name":  name,
+		"value": value,
+	}
+}
+
+// TextFileCredential returns a textfile credential with valid type
+func TextFileCredential(name string, value string, rows int, cols int, saveAs string) Credential {
+	return Credential{
+		"type":    "textfile",
+		"name":    name,
+		"save_as": saveAs,
+		"value":   value,
+		"rows":    rows,
+		"cols":    cols,
+	}
+}
+
+// TextFileCredentialAuto returns a textfile credential with valid type and set width and
+// height to sane values
+func TextFileCredentialAuto(name string, value string, saveAs string) Credential {
+	maxWidth := 0
+	lines := strings.Split(value, "\n")
+	for _, line := range lines {
+		l := len(line)
+		if l > maxWidth {
+			maxWidth = l
+		}
+	}
+	return Credential{
+		"type":    "textfile",
+		"name":    name,
+		"save_as": saveAs,
+		"value":   value,
+		"rows":    len(lines),
+		"cols":    maxWidth,
+	}
+}
+
+// Check check an error and exit with exitCode if it fails
+func Check(err error, exitCode int, msg string) {
+	if err != nil {
+		var errorMsg string
+		if msg != "" {
+			errorMsg = fmt.Sprintf("%s - %s", err, msg)
+		} else {
+			errorMsg = fmt.Sprintf("%s", err)
+		}
+		terminate(PluginError(errorMsg), exitCode)
+	}
+	return
+}
+
 // terminate print the output and terminate the plugin
 func terminate(o Output, exitCode int) {
 	printOutput(o)
@@ -223,7 +336,7 @@ func PluginGoodRequest(credential []Credential, credentialState string) Output {
 	}
 }
 
-// PluginAdditionalLogin to be returned by request if the an additional login is needed
+// PluginAdditionalLogin to be returned by request if an additional login is needed
 func PluginAdditionalLogin(providerID string, userMsg string) Output {
 	return Output{
 		"result":   "oidc_login",
@@ -264,10 +377,7 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 	input := decodeInput(*pluginInput)
 
-	// validate the input against the descriptor
-	validatePluginInput(input, pluginDescriptor)
-	
-	// execute the plugin action
+	// execute the plugin action (validation eventually takes also place)
 	output := executeAction(input, pluginDescriptor)
 	printOutput(output)
 }
