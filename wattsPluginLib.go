@@ -1,13 +1,13 @@
 package wattsPluginLib
 
 import (
-	"io/ioutil"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/indigo-dc/watts-plugin-tester/schemes"
 	"github.com/kalaspuffar/base64url"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"io/ioutil"
 	"os"
 )
 
@@ -79,8 +79,8 @@ const (
 // TextCredential returns a text credential with valid type
 func TextCredential(name string, value string) Credential {
 	return Credential{
-		"type": "text",
-		"name": name,
+		"type":  "text",
+		"name":  name,
 		"value": value,
 	}
 }
@@ -88,12 +88,12 @@ func TextCredential(name string, value string) Credential {
 // TextFileCredential returns a textfile credential with valid type
 func TextFileCredential(name string, value string, rows int, cols int, saveAs string) Credential {
 	return Credential{
-		"type": "textfile",
-		"name": name,
+		"type":    "textfile",
+		"name":    name,
 		"save_as": saveAs,
-		"value": value,
-		"rows": rows,
-		"cols": cols,
+		"value":   value,
+		"rows":    rows,
+		"cols":    cols,
 	}
 }
 
