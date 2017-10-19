@@ -9,6 +9,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 type (
@@ -95,6 +96,31 @@ func TextFileCredential(name string, value string, rows int, cols int, saveAs st
 		"rows":    rows,
 		"cols":    cols,
 	}
+}
+
+// AutoCredential returns a credential which tries to derive type and other attributes
+func AutoCredential(name string, value interface{}) (c Credential) {
+	switch value.(type) {
+	case string:
+		stringValue := value.(string)
+		lines := strings.Split(stringValue, "\n")
+		if len(lines) > 0 {
+			longestLineLength := 0
+			for _, s := range lines {
+				if l := len(s); l > longestLineLength {
+					longestLineLength = l
+				}
+			}
+			row := len(lines)
+			col := longestLineLength
+			c = TextFileCredential(name, stringValue, row+3, col, name+".txt")
+		} else {
+			c = TextCredential(name, stringValue)
+		}
+	default:
+		c = TextCredential(name, fmt.Sprintf("%s", value))
+	}
+	return c
 }
 
 // Check check an error and exit with exitCode if it fails
