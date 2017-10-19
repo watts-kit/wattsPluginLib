@@ -106,13 +106,10 @@ func decodeInput(input string) (i Input) {
 	var testInterface interface{}
 	err = json.Unmarshal(bs, &testInterface)
 	Check(err, 1, "unmarshaling input")
-	validate_minimal(testInterface)
+	validate(testInterface)
 
 	err = json.Unmarshal(bs, &i)
 	Check(err, 1, "unmarshaling input")
-	if i.Action != "parameter" {
-		validate(testInterface)
-	}
 	return i
 }
 
@@ -184,12 +181,6 @@ func executeAction(input Input, pd PluginDescriptor) (output Output) {
 func validate(pluginInput interface{}) {
 	path, err := schemes.PluginInputScheme.Validate(pluginInput)
 	Check(err, 1, fmt.Sprintf("on validating plugin input at path %s", path))
-	return
-}
-
-func validate_minimal(pluginInput interface{}) {
-	path, err := schemes.PluginInputMinimalScheme.Validate(pluginInput)
-	Check(err, 1, fmt.Sprintf("on validating minimal plugin input at path %s", path))
 	return
 }
 
