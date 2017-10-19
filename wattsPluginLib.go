@@ -69,7 +69,7 @@ type (
 )
 
 const (
-	libVersion = "3.0.0"
+	libVersion = "3.0.2"
 
 	// write out to files
 	// this should be false
