@@ -142,6 +142,7 @@ func decodeInput(input string) (i Input) {
 	Check(err, 1, "unmarshaling input")
 	validate(testInterface)
 
+	// more thorough check of the input ---
 	var testMap map[string]interface{}
 	err = json.Unmarshal(bs, &testMap)
 	Check(err, 1, "unmarshaling input into map")
@@ -150,6 +151,9 @@ func decodeInput(input string) (i Input) {
 		delete(testMap, "params")
 	}
 	bs, err = json.Marshal(testMap)
+	Check(err, 1, "unmarshaling input into map")
+	// ---
+
 	err = json.Unmarshal(bs, &i)
 	Check(err, 1, "unmarshaling input")
 	return i
