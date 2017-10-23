@@ -102,7 +102,9 @@ func TextFileCredential(name string, value string, rows int, cols int, saveAs st
 func AutoCredential(name string, value interface{}) (c Credential) {
 	switch value.(type) {
 	case string:
-		stringValue := value.(string)
+		stringValue, ok := value.(string)
+		CheckOk(ok, 1, "AutoCredential: got no string");
+
 		lines := strings.Split(stringValue, "\n")
 		if len(lines) > 0 {
 			longestLineLength := 0
@@ -133,6 +135,14 @@ func Check(err error, exitCode int, msg string) {
 			errorMsg = fmt.Sprintf("%s", err)
 		}
 		terminate(PluginError(errorMsg), exitCode)
+	}
+	return
+}
+
+// CheckOk check an ok and exit with exitCode if it fails
+func CheckOk(ok bool, exitCode int, msg string) {
+	if !ok {
+		terminate(PluginError(msg), exitCode)
 	}
 	return
 }
@@ -173,7 +183,7 @@ func decodeInput(input string) (i Input) {
 	err = json.Unmarshal(bs, &testMap)
 	Check(err, 1, "unmarshaling input into map")
 
-	if testMap["action"].(string) == "revoke" {
+	if val, ok := testMap["action"].(string); ok && val == "revoke" {
 		delete(testMap, "params")
 	}
 	bs, err = json.Marshal(testMap)
