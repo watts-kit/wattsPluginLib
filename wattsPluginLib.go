@@ -70,7 +70,7 @@ type (
 )
 
 const (
-	libVersion = "3.0.2"
+	libVersion = "3.0.3"
 
 	// write out to files
 	// this should be false
@@ -106,7 +106,7 @@ func AutoCredential(name string, value interface{}) (c Credential) {
 		CheckOk(ok, 1, "AutoCredential: got no string");
 
 		lines := strings.Split(stringValue, "\n")
-		if len(lines) > 0 {
+		if len(lines) > 1 {
 			longestLineLength := 0
 			for _, s := range lines {
 				if l := len(s); l > longestLineLength {
@@ -170,7 +170,7 @@ func printOutput(i interface{}) {
 
 func decodeInput(input string) (i Input) {
 	bs, err := base64url.Decode(input)
-	Check(err, 1, "decoding base64 string")
+	Check(err, 1, fmt.Sprintf("decoding base64 string - %s", input))
 
 	// validate the input against a scheme
 	var testInterface interface{}
@@ -183,7 +183,9 @@ func decodeInput(input string) (i Input) {
 	err = json.Unmarshal(bs, &testMap)
 	Check(err, 1, "unmarshaling input into map")
 
-	if val, ok := testMap["action"].(string); ok && val == "revoke" {
+	action, ok := testMap["action"].(string)
+	CheckOk(ok, 1, "action is not a string")
+	if action == "revoke" {
 		delete(testMap, "params")
 	}
 	bs, err = json.Marshal(testMap)
@@ -214,7 +216,9 @@ func initializePlugin(input Input, pd PluginDescriptor) {
 	// initialized
 	if action, ok := pd.Actions["isInitialized"]; ok {
 		output = action(input)
-		if isInitialized, ok := output["isInitialized"].(bool); ok && isInitialized {
+		isInitialized, ok := output["isInitialized"].(bool)
+		CheckOk(ok, 1, "isInitialized is no bool")
+		if isInitialized {
 			return
 		}
 	}
@@ -224,7 +228,9 @@ func initializePlugin(input Input, pd PluginDescriptor) {
 	// successful
 	if action, ok := pd.Actions["initialize"]; ok {
 		output = action(input)
-		if result, ok := output["result"].(string); ok && result == "ok" {
+		result, ok := output["result"].(string)
+		CheckOk(ok, 1, "result is no string")
+		if result == "ok" {
 			return
 		}
 		terminate(output, 1)
@@ -374,6 +380,13 @@ func PluginError(logMsg string) (o Output) {
 
 // PluginRun is to be run by the implementing plugin
 func PluginRun(pluginDescriptor PluginDescriptor) {
+	// Report panics
+	defer func() {
+		if r := recover(); r != nil {
+			PluginError(fmt.Sprint(r))
+		}
+	}()
+
 	app := kingpin.New(
 		pluginDescriptor.Name,
 		pluginDescriptor.Description+" (plugin version: "+pluginDescriptor.Version+") (wattsPluginLib version: "+libVersion+")")
@@ -387,5 +400,6 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 
 	// execute the plugin action (validation eventually takes also place)
 	output := executeAction(input, pluginDescriptor)
+
 	printOutput(output)
 }
