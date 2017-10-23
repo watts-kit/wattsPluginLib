@@ -70,7 +70,7 @@ type (
 )
 
 const (
-	libVersion = "3.0.3"
+	libVersion = "3.0.4"
 
 	// write out to files
 	// this should be false
@@ -278,21 +278,22 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 	for _, cpd := range pd.ConfigParams {
 		if paramValue, ok := input.Conf[cpd.Name]; ok {
 			expectedType := cpd.Type
-			actualType := ""
 
 			// TODO support more types
 			switch paramType := paramValue.(type) {
 			case string:
-				actualType = "string"
+				if expectedType == "string" ||
+					expectedType == "text" ||
+					expectedType == "textfile" ||
+					expectedType  == "textarea" {
+						continue
+				}
 			case bool:
-				actualType = "bool"
+				if expectedType == "boolean" {
+					continue
+				}
 			default:
-				PluginError(fmt.Sprintf("config parameter %s needs to be of type %s (is %s)",
-					cpd.Name, cpd.Type, paramType))
-			}
-
-			if expectedType != actualType {
-				PluginError(fmt.Sprintf("config parameter %s needs to be of type %s", cpd.Name, cpd.Type))
+				PluginError(fmt.Sprintf("config parameter %s needs to be of type %s not %s", cpd.Name, cpd.Type, paramType))
 			}
 		} else {
 			PluginError(fmt.Sprintf("config parameter %s needs to be provided", cpd.Name))
@@ -303,21 +304,20 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 	for _, rpd := range pd.RequestParams {
 		if paramValue, ok := input.Params[rpd.Key]; ok {
 			expectedType := rpd.Type
-			actualType := ""
-
-			// TODO support more types
 			switch paramType := paramValue.(type) {
 			case string:
-				actualType = "string"
+				if expectedType == "string" ||
+					expectedType == "text" ||
+					expectedType == "textfile" ||
+					expectedType  == "textarea" {
+						continue
+				}
 			case bool:
-				actualType = "bool"
+				if expectedType == "boolean" {
+					continue
+				}
 			default:
-				PluginError(fmt.Sprintf("request parameter %s needs to be of type %s (is %s)",
-					rpd.Name, rpd.Type, paramType))
-			}
-
-			if expectedType != actualType {
-				PluginError(fmt.Sprintf("request parameter %s needs to be of type %s", rpd.Key, rpd.Type))
+				PluginError(fmt.Sprintf("request parameter %s needs to be of type %s not %s", rpd.Name, rpd.Type, paramType))
 			}
 		} else {
 			// only fail if the request parametr is mandatory
