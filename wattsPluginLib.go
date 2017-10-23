@@ -378,6 +378,17 @@ func PluginError(logMsg string) (o Output) {
 	return
 }
 
+// PluginUserError call to indicate an error
+func PluginUserError(logMsg string, userMsg string) (o Output) {
+	o = Output{
+		"user_msg": userMsg,
+		"log_msg":  logMsg,
+		"result":   "error",
+	}
+	terminate(o, 1)
+	return
+}
+
 // PluginRun is to be run by the implementing plugin
 func PluginRun(pluginDescriptor PluginDescriptor) {
 	// Report panics
