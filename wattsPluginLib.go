@@ -301,28 +301,30 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 	}
 
 	// check all request parameters for existence and correct type
-	for _, rpd := range pd.RequestParams {
-		if paramValue, ok := input.Params[rpd.Key]; ok {
-			expectedType := rpd.Type
-			switch paramType := paramValue.(type) {
-			case string:
-				if expectedType == "string" ||
-					expectedType == "text" ||
-					expectedType == "textfile" ||
-					expectedType  == "textarea" {
+	if input.Action == "request" {
+		for _, rpd := range pd.RequestParams {
+			if paramValue, ok := input.Params[rpd.Key]; ok {
+				expectedType := rpd.Type
+				switch paramType := paramValue.(type) {
+				case string:
+					if expectedType == "string" ||
+						expectedType == "text" ||
+						expectedType == "textfile" ||
+						expectedType  == "textarea" {
+							continue
+					}
+				case bool:
+					if expectedType == "boolean" {
 						continue
+					}
+				default:
+					PluginError(fmt.Sprintf("request parameter %s needs to be of type %s not %s", rpd.Name, rpd.Type, paramType))
 				}
-			case bool:
-				if expectedType == "boolean" {
-					continue
+			} else {
+				// only fail if the request parametr is mandatory
+				if rpd.Mandatory {
+					PluginError(fmt.Sprintf("request parameter %s needs to be provided", rpd.Key))
 				}
-			default:
-				PluginError(fmt.Sprintf("request parameter %s needs to be of type %s not %s", rpd.Name, rpd.Type, paramType))
-			}
-		} else {
-			// only fail if the request parametr is mandatory
-			if rpd.Mandatory {
-				PluginError(fmt.Sprintf("request parameter %s needs to be provided", rpd.Key))
 			}
 		}
 	}
