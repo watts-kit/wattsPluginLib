@@ -202,7 +202,6 @@ func actionParameter(pd PluginDescriptor) Output {
 		"conf_params": pd.ConfigParams,
 		"request_params": []interface{}{
 			pd.RequestParams,
-			[]interface{}{},
 		},
 		"version": pd.Version,
 		"result":  "ok",
