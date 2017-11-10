@@ -9,6 +9,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -38,6 +39,11 @@ type (
 	// Action is the type of a method implemented by the plugin to execute an action
 	Action (func(Input) Output)
 
+	// SSHHost for runSSHCommand
+	SSHHost struct {
+		User interface{}
+		Host interface{}
+	}
 	// AdditionalLogin type
 	AdditionalLogin struct {
 		UserInfo    map[string]string `json:"user_info"`
@@ -70,12 +76,35 @@ type (
 )
 
 const (
-	libVersion = "3.0.4"
+	libVersion = "3.1.0"
 
 	// write out to files
 	// this should be false
 	debug = true
 )
+
+// SSHHostFromConf SSH Host from config values
+func (pi *Input) SSHHostFromConf(userKey string, hostKey string) (SSHHost) {
+	return SSHHost{
+		User: pi.Conf[userKey],
+		Host: pi.Conf[hostKey],
+	}
+}
+
+func (h *SSHHost) String() (s string) {
+	return fmt.Sprintf("%s@%s", h.User, h.Host)
+}
+
+// RunSSHCommand run command the SSHHost
+func (h *SSHHost) RunSSHCommand(cmdParts ...string) (output string) {
+	parameters := append([]string{h.String()}, cmdParts...)
+	cmd := exec.Command("ssh", parameters...)
+	outputBytes, err := cmd.Output()
+	if err != nil {
+		PluginError(fmt.Sprint(cmd, err))
+	}
+	return string(outputBytes)
+}
 
 // TextCredential returns a text credential with valid type
 func TextCredential(name string, value string) Credential {
@@ -103,7 +132,7 @@ func AutoCredential(name string, value interface{}) (c Credential) {
 	switch value.(type) {
 	case string:
 		stringValue, ok := value.(string)
-		CheckOk(ok, 1, "AutoCredential: got no string");
+		CheckOk(ok, 1, "AutoCredential: got no string")
 
 		lines := strings.Split(stringValue, "\n")
 		if len(lines) > 1 {
@@ -284,8 +313,8 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 				if expectedType == "string" ||
 					expectedType == "text" ||
 					expectedType == "textfile" ||
-					expectedType  == "textarea" {
-						continue
+					expectedType == "textarea" {
+					continue
 				}
 			case bool:
 				if expectedType == "boolean" {
@@ -309,8 +338,8 @@ func validatePluginInput(input Input, pd PluginDescriptor) {
 					if expectedType == "string" ||
 						expectedType == "text" ||
 						expectedType == "textfile" ||
-						expectedType  == "textarea" {
-							continue
+						expectedType == "textarea" {
+						continue
 					}
 				case bool:
 					if expectedType == "boolean" {
