@@ -7,7 +7,6 @@ import (
 	"github.com/indigo-dc/watts-plugin-tester/schemes"
 	"github.com/kalaspuffar/base64url"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -76,11 +75,7 @@ type (
 )
 
 const (
-	libVersion = "3.1.0"
-
-	// write out to files
-	// this should be false
-	debug = true
+	libVersion = "3.2.0"
 )
 
 // SSHHostFromConf SSH Host from config values
@@ -189,12 +184,6 @@ func printOutput(i interface{}) {
 	Check(err, 1, "marshalIndent")
 	outputBytes := b.Bytes()
 	fmt.Printf("%s", string(outputBytes))
-
-	if debug {
-		logFile := "/tmp/wattsPluginLib-debug"
-		err = ioutil.WriteFile(logFile, outputBytes, 0700)
-		Check(err, 1, "unable to write log file")
-	}
 }
 
 func decodeInput(input string) (i Input) {
