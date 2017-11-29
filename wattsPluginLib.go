@@ -1,6 +1,7 @@
 package wattsPluginLib
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -44,7 +45,7 @@ type (
 
 	// SSHHostList for RunSSHCommand
 	SSHHostList []SSHHost
-	
+
 	// AdditionalLogin type
 	AdditionalLogin struct {
 		UserInfo    map[string]string `json:"user_info"`
@@ -77,7 +78,7 @@ type (
 )
 
 const (
-	libVersion = "4.0.0"
+	libVersion = "4.1.0"
 )
 
 // PublicKeyFromParams get a public key from the parameters
@@ -107,16 +108,16 @@ func (pi *Input) PublicKeyFromParams(key string) (publicKey string) {
 }
 
 // SSHHostFromConf SSH Host from config values
-func (pi *Input) SSHHostFromConf(userKey string, hostKey string) (SSHHost) {
+func (pi *Input) SSHHostFromConf(userKey string, hostKey string) SSHHost {
 	return SSHHost(fmt.Sprintf("%s@%s", pi.Conf[userKey], pi.Conf[hostKey]))
 }
 
 // SSHHostListFromConf get ssh hosts from a space separated list of ssh hosts
-func (pi *Input) SSHHostListFromConf(hostListKey string) (SSHHostList) {
+func (pi *Input) SSHHostListFromConf(hostListKey string) SSHHostList {
 	listString := pi.Conf[hostListKey].(string)
 	list := strings.Split(listString, " ")
 	hostList := make(SSHHostList, len(list))
-	for i,v := range list {
+	for i, v := range list {
 		hostList[i] = SSHHost(v)
 	}
 	return hostList
@@ -130,7 +131,7 @@ func (h *SSHHost) RunSSHCommand(cmdParts ...string) (output string) {
 	if err != nil {
 		PluginUserError(
 			fmt.Sprint(cmdParts, err, cmdParts),
-			fmt.Sprintf("Error executing a command on the remote host %s",*h),
+			fmt.Sprintf("Error executing a command on the remote host %s", *h),
 		)
 	}
 	return string(outputBytes)
@@ -145,7 +146,7 @@ func (h *SSHHost) RunSSHCommandErr(cmdParts ...string) (output string, err error
 }
 
 // RunSSHCommand run command on all hosts in the host list
-func (h *SSHHostList) RunSSHCommand(cmdParts ...string) ([]string) {
+func (h *SSHHostList) RunSSHCommand(cmdParts ...string) []string {
 	l := len(*h)
 	output := make([]string, l)
 	ch := make(chan string, l)
@@ -485,13 +486,28 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 	app := kingpin.New(
 		pluginDescriptor.Name,
 		pluginDescriptor.Description+" (plugin version: "+pluginDescriptor.Version+") (wattsPluginLib version: "+libVersion+")")
-	pluginInput := app.Arg("pluginInput (base64url encoded json)", "base64url encoded input").Required().String()
+	pluginInput := app.Arg("pluginInput (base64url encoded json)", "base64url encoded input").String()
 	app.Author(pluginDescriptor.Author)
 	app.Version(pluginDescriptor.Version)
 
 	// get input
 	kingpin.MustParse(app.Parse(os.Args[1:]))
-	input := decodeInput(*pluginInput)
+
+	var (
+		rawInput string
+		err error
+	)
+	if *pluginInput == "" {
+		reader := bufio.NewReader(os.Stdin)
+		rawInput, err = reader.ReadString('\n')
+		// rawInput contains the trailing \n
+		rawInput = strings.Trim(rawInput, "\n")
+		Check(err, 1, "Reading input")
+	} else {
+		rawInput = *pluginInput
+	}
+
+	input := decodeInput(rawInput)
 
 	// execute the plugin action (validation eventually takes also place)
 	output := executeAction(input, pluginDescriptor)
