@@ -77,7 +77,7 @@ type (
 )
 
 const (
-	libVersion = "3.2.0"
+	libVersion = "4.0.0"
 )
 
 // PublicKeyFromParams get a public key from the parameters
@@ -485,7 +485,7 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 	app := kingpin.New(
 		pluginDescriptor.Name,
 		pluginDescriptor.Description+" (plugin version: "+pluginDescriptor.Version+") (wattsPluginLib version: "+libVersion+")")
-	pluginInput := app.Arg("pluginInput (base64url encoded json)", "base64url encoded input").Required().Envar("WATTS_PARAMETER").String()
+	pluginInput := app.Arg("pluginInput (base64url encoded json)", "base64url encoded input").Required().String()
 	app.Author(pluginDescriptor.Author)
 	app.Version(pluginDescriptor.Version)
 
