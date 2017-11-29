@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 type (
@@ -38,11 +39,12 @@ type (
 	// Action is the type of a method implemented by the plugin to execute an action
 	Action (func(Input) Output)
 
-	// SSHHost for runSSHCommand
-	SSHHost struct {
-		User interface{}
-		Host interface{}
-	}
+	// SSHHost for RunSSHCommand
+	SSHHost string
+
+	// SSHHostList for RunSSHCommand
+	SSHHostList []SSHHost
+	
 	// AdditionalLogin type
 	AdditionalLogin struct {
 		UserInfo    map[string]string `json:"user_info"`
@@ -78,27 +80,90 @@ const (
 	libVersion = "3.2.0"
 )
 
-// SSHHostFromConf SSH Host from config values
-func (pi *Input) SSHHostFromConf(userKey string, hostKey string) (SSHHost) {
-	return SSHHost{
-		User: pi.Conf[userKey],
-		Host: pi.Conf[hostKey],
+// PublicKeyFromParams get a public key from the parameters
+// also validates the amount of parts of the public key
+func (pi *Input) PublicKeyFromParams(key string) (publicKey string) {
+	if pk, ok := pi.Params["pub_key"]; ok {
+		rawPublicKey, ok := pk.(string)
+		CheckOk(ok, 1, "pub_key is no string")
+
+		// parse the public key
+		keyElements := strings.Split(rawPublicKey, " ")
+		switch len(keyElements) {
+		case 2:
+			// case key-type + key
+			publicKey = rawPublicKey
+		case 3:
+			// case key-type + key + comment
+			publicKey = fmt.Sprintf("%s %s", keyElements[0], keyElements[1])
+		default:
+			PluginUserError(
+				fmt.Sprintf("Cannot parse user provided public key (e = %v)", len(keyElements)),
+				"Unable to parse the provided ssh public key",
+			)
+		}
 	}
+	return
 }
 
-func (h *SSHHost) String() (s string) {
-	return fmt.Sprintf("%s@%s", h.User, h.Host)
+// SSHHostFromConf SSH Host from config values
+func (pi *Input) SSHHostFromConf(userKey string, hostKey string) (SSHHost) {
+	return SSHHost(fmt.Sprintf("%s@%s", pi.Conf[userKey], pi.Conf[hostKey]))
+}
+
+// SSHHostListFromConf get ssh hosts from a space separated list of ssh hosts
+func (pi *Input) SSHHostListFromConf(hostListKey string) (SSHHostList) {
+	listString := pi.Conf[hostListKey].(string)
+	list := strings.Split(listString, " ")
+	hostList := make(SSHHostList, len(list))
+	for i,v := range list {
+		hostList[i] = SSHHost(v)
+	}
+	return hostList
 }
 
 // RunSSHCommand run command the SSHHost
 func (h *SSHHost) RunSSHCommand(cmdParts ...string) (output string) {
-	parameters := append([]string{h.String()}, cmdParts...)
+	parameters := append([]string{string(*h)}, cmdParts...)
 	cmd := exec.Command("ssh", parameters...)
 	outputBytes, err := cmd.Output()
 	if err != nil {
-		PluginError(fmt.Sprint(cmd, err))
+		PluginUserError(
+			fmt.Sprint(cmdParts, err, cmdParts),
+			fmt.Sprintf("Error executing a command on the remote host %s",*h),
+		)
 	}
 	return string(outputBytes)
+}
+
+// RunSSHCommandErr like RunSSHCommand, but with error passtrough
+func (h *SSHHost) RunSSHCommandErr(cmdParts ...string) (output string, err error) {
+	parameters := append([]string{string(*h)}, cmdParts...)
+	cmd := exec.Command("ssh", parameters...)
+	outputBytes, err := cmd.Output()
+	return string(outputBytes), err
+}
+
+// RunSSHCommand run command on all hosts in the host list
+func (h *SSHHostList) RunSSHCommand(cmdParts ...string) ([]string) {
+	l := len(*h)
+	output := make([]string, l)
+	ch := make(chan string, l)
+	wg := sync.WaitGroup{}
+	for _, host := range *h {
+		wg.Add(1)
+		go func(h SSHHost, ch chan string, wg *sync.WaitGroup) {
+			o := (&h).RunSSHCommand(cmdParts...)
+			ch <- o
+			wg.Done()
+		}(host, ch, &wg)
+	}
+	wg.Wait()
+	close(ch)
+	for o := range ch {
+		output = append(output, o)
+	}
+	return output
 }
 
 // TextCredential returns a text credential with valid type
