@@ -18,6 +18,11 @@ type (
 	// Credential to be created by request
 	Credential map[string]interface{}
 
+	// FeatureDescriptor for the PluginDescriptor
+	FeatureDescriptor struct {
+		Stdin bool `json:"stdin"`
+	}
+
 	// ConfigParamsDescriptor for the PluginDescriptor
 	ConfigParamsDescriptor struct {
 		Name    string      `json:"name"`
@@ -67,18 +72,20 @@ type (
 
 	// PluginDescriptor describes a plugin to be executed by the wattsPluginLib
 	PluginDescriptor struct {
-		Author        string
-		Version       string
-		Description   string
-		Name          string
-		Actions       map[string]Action
-		ConfigParams  []ConfigParamsDescriptor
-		RequestParams []RequestParamsDescriptor
+		Author         string
+		Version        string
+		Description    string
+		Name           string
+		DeveloperEmail string
+		Actions        map[string]Action
+		ConfigParams   []ConfigParamsDescriptor
+		RequestParams  []RequestParamsDescriptor
+		Features       FeatureDescriptor
 	}
 )
 
 const (
-	libVersion = "4.1.0"
+	libVersion = "4.2.0"
 )
 
 // PublicKeyFromParams get a public key from the parameters
@@ -281,15 +288,21 @@ func decodeInput(input string) (i Input) {
 	return i
 }
 
-func actionParameter(pd PluginDescriptor) Output {
-	return Output{
+func actionParameter(pd PluginDescriptor) (o Output) {
+	o = Output{
 		"conf_params": pd.ConfigParams,
 		"request_params": []interface{}{
 			pd.RequestParams,
 		},
+		"features": pd.Features,
 		"version": pd.Version,
 		"result":  "ok",
 	}
+
+	if pd.DeveloperEmail != "" {
+		o["developer_email"] = pd.DeveloperEmail
+	}
+	return
 }
 
 func initializePlugin(input Input, pd PluginDescriptor) {
@@ -483,6 +496,9 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 		}
 	}()
 
+	// set features provided by us natively
+	pluginDescriptor.Features.Stdin = true
+
 	app := kingpin.New(
 		pluginDescriptor.Name,
 		pluginDescriptor.Description+" (plugin version: "+pluginDescriptor.Version+") (wattsPluginLib version: "+libVersion+")")
@@ -495,7 +511,7 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 
 	var (
 		rawInput string
-		err error
+		err      error
 	)
 	if *pluginInput == "" {
 		reader := bufio.NewReader(os.Stdin)
