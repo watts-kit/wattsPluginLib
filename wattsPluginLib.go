@@ -85,7 +85,7 @@ type (
 )
 
 const (
-	libVersion = "4.2.0"
+	libVersion = "4.3.0"
 )
 
 // PublicKeyFromParams get a public key from the parameters
@@ -193,6 +193,34 @@ func TextFileCredential(name string, value string, rows int, cols int, saveAs st
 		"rows":    rows,
 		"cols":    cols,
 	}
+}
+
+// AutoTextFileCredential returns a credential which tries to derive type and other attributes
+// takes a filename for the case that the credential is a textfile
+func AutoTextFileCredential(name string, value interface{}, saveAs string) (c Credential) {
+	switch value.(type) {
+	case string:
+		stringValue, ok := value.(string)
+		CheckOk(ok, 1, "AutoCredential: got no string")
+
+		lines := strings.Split(stringValue, "\n")
+		if len(lines) > 1 {
+			longestLineLength := 0
+			for _, s := range lines {
+				if l := len(s); l > longestLineLength {
+					longestLineLength = l
+				}
+			}
+			row := len(lines)
+			col := longestLineLength
+			c = TextFileCredential(name, stringValue, row+3, col, saveAs)
+		} else {
+			c = TextCredential(name, stringValue)
+		}
+	default:
+		c = TextCredential(name, fmt.Sprintf("%s", value))
+	}
+	return c
 }
 
 // AutoCredential returns a credential which tries to derive type and other attributes
