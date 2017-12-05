@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/watts-kit/watts-plugin-tester/schemes"
 	"github.com/kalaspuffar/base64url"
+	"github.com/watts-kit/wattsPluginAPISchemes"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"os/exec"
@@ -323,8 +323,8 @@ func actionParameter(pd PluginDescriptor) (o Output) {
 			pd.RequestParams,
 		},
 		"features": pd.Features,
-		"version": pd.Version,
-		"result":  "ok",
+		"version":  pd.Version,
+		"result":   "ok",
 	}
 
 	if pd.DeveloperEmail != "" {
@@ -527,9 +527,11 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 	// set features provided by us natively
 	pluginDescriptor.Features.Stdin = true
 
-	app := kingpin.New(
-		pluginDescriptor.Name,
-		pluginDescriptor.Description+" (plugin version: "+pluginDescriptor.Version+") (wattsPluginLib version: "+libVersion+")")
+	versionDescription := fmt.Sprintf("(plugin version: %s) (wattsPluginLib version: %s) (wattsPluginAPISchemes version: %s)", pluginDescriptor.Version, libVersion, schemes.MaxWattsVersion)
+	description := pluginDescriptor.Description + versionDescription
+
+	app := kingpin.New(pluginDescriptor.Name, description)
+
 	pluginInput := app.Arg("pluginInput (base64url encoded json)", "base64url encoded input").String()
 	app.Author(pluginDescriptor.Author)
 	app.Version(pluginDescriptor.Version)
