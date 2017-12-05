@@ -5,8 +5,8 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	l "git.scc.kit.edu/lukasburgey/wattsPluginLib"
 	keygen "github.com/night-codes/go-keygen"
+	l "github.com/watts-kit/wattsPluginLib"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -103,6 +103,6 @@ func GenerateSSHKey(rsaBits int, rsaPasswordLength int) (sshKeypair SSHKeypair) 
 
 // GeneratePassword generate a password with given length
 func GeneratePassword(length int) (password string) {
-		password = keygen.NewPass(length)
-		return
+	password = keygen.NewPass(length)
+	return
 }
