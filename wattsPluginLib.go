@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/kalaspuffar/base64url"
-	"github.com/watts-kit/wattsPluginAPISchemes"
-	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
+
+	"github.com/kalaspuffar/base64url"
+	"github.com/watts-kit/wattsPluginAPISchemes"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 type (
