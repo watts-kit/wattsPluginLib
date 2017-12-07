@@ -1,4 +1,4 @@
-package wattsPluginLib
+package pluginlib
 
 import (
 	"bufio"
