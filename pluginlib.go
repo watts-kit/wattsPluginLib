@@ -251,7 +251,7 @@ func AutoCredential(name string, value interface{}) (c Credential) {
 	return c
 }
 
-// Check check an error and exit with exitCode if it fails
+// Check an error and exit with exitCode if it fails
 func Check(err error, exitCode int, msg string) {
 	if err != nil {
 		var errorMsg string
@@ -265,7 +265,7 @@ func Check(err error, exitCode int, msg string) {
 	return
 }
 
-// CheckOk check an ok and exit with exitCode if it fails
+// CheckOk check if ok is true and exit with exitCode if not
 func CheckOk(ok bool, exitCode int, msg string) {
 	if !ok {
 		terminate(PluginError(msg), exitCode)
@@ -493,7 +493,7 @@ func PluginGoodRevoke() Output {
 	}
 }
 
-// PluginError call to indicate an error
+// PluginError call to indicate an error in the logs, but not to the user
 func PluginError(logMsg string) (o Output) {
 	o = Output{
 		"user_msg": "Internal error, please contact the administrator",
@@ -505,7 +505,7 @@ func PluginError(logMsg string) (o Output) {
 	return
 }
 
-// PluginUserError call to indicate an error
+// PluginUserError call to indicate an error in the logs and separately to the user
 func PluginUserError(logMsg string, userMsg string) (o Output) {
 	o = Output{
 		"user_msg": userMsg,
