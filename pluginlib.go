@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"io"
 	"os/exec"
 	"strings"
 	"sync"
@@ -86,7 +87,7 @@ type (
 )
 
 const (
-	libVersion = "4.3.0"
+	libVersion = "4.3.1"
 )
 
 // PublicKeyFromParams get a public key from the parameters
@@ -545,11 +546,17 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 		err      error
 	)
 	if *pluginInput == "" {
+		data := make([]byte, 1)
 		reader := bufio.NewReader(os.Stdin)
-		rawInput, err = reader.ReadString('\n')
-		// rawInput contains the trailing \n
-		rawInput = strings.Trim(rawInput, "\n")
-		Check(err, 1, "Reading input")
+
+		_, err = io.ReadFull(reader, data)
+		for err == nil {
+			rawInput = rawInput + string(data)
+			_, err = io.ReadFull(reader, data)
+		}
+		if err != io.EOF {
+			Check(err, 1, "Reading input")
+		}
 	} else {
 		rawInput = *pluginInput
 	}
