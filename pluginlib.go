@@ -87,7 +87,7 @@ type (
 )
 
 const (
-	libVersion = "4.3.1"
+	libVersion = "4.3.2"
 )
 
 // PublicKeyFromParams get a public key from the parameters
@@ -544,15 +544,15 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 	var (
 		rawInput string
 		err      error
+		r        rune
 	)
 	if *pluginInput == "" {
-		data := make([]byte, 1)
 		reader := bufio.NewReader(os.Stdin)
 
-		_, err = io.ReadFull(reader, data)
+		r, _, err = reader.ReadRune()
 		for err == nil {
-			rawInput = rawInput + string(data)
-			_, err = io.ReadFull(reader, data)
+			rawInput = rawInput + string(r)
+			r, _, err = reader.ReadRune()
 		}
 		if err != io.EOF {
 			Check(err, 1, "Reading input")
