@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
-	"io"
 	"os/exec"
 	"strings"
 	"sync"
@@ -87,7 +87,7 @@ type (
 )
 
 const (
-	libVersion = "4.3.2"
+	libVersion = "4.3.3"
 )
 
 // PublicKeyFromParams get a public key from the parameters
@@ -543,20 +543,15 @@ func PluginRun(pluginDescriptor PluginDescriptor) {
 
 	var (
 		rawInput string
-		err      error
-		r        rune
 	)
 	if *pluginInput == "" {
 		reader := bufio.NewReader(os.Stdin)
 
-		r, _, err = reader.ReadRune()
-		for err == nil {
-			rawInput = rawInput + string(r)
-			r, _, err = reader.ReadRune()
-		}
-		if err != io.EOF {
-			Check(err, 1, "Reading input")
-		}
+		readInput, err := ioutil.ReadAll(reader)
+		Check(err, 1, "Reading input")
+
+		// Trim unwanted characters from the string
+		rawInput = strings.Trim(string(readInput), "\n\t ")
 	} else {
 		rawInput = *pluginInput
 	}
